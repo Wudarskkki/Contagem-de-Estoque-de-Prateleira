@@ -128,6 +128,7 @@
 </div>
 
 <script>
+/* ========== MATERIAIS ========== */
 const MATERIALS = [
   { id: 'a', code: '0401025V', tag: 'Shpx',   full: 216, half: null },
   { id: 'b', code: '0400020V', tag: '',       full: 112, half: 56 },
@@ -142,7 +143,7 @@ const MATERIALS = [
 const STORAGE_KEY = 'estoque-contagem-v1';
 let currentCanvas = null;
 
-/* ---------- Persistência ---------- */
+/* ========== PERSISTÊNCIA ========== */
 function loadState() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
   catch { return {}; }
@@ -151,7 +152,7 @@ function saveState(state) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
 }
 
-/* ---------- Render da lista ---------- */
+/* ========== RENDER LISTA ========== */
 function renderList() {
   const state = loadState();
   const container = document.getElementById('list');
@@ -200,7 +201,6 @@ function renderList() {
     container.appendChild(card);
   });
 
-  // Listeners
   container.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       const target = document.getElementById(btn.dataset.target);
@@ -233,7 +233,7 @@ function persist() {
   saveState(state);
 }
 
-/* ---------- Coleta de dados ---------- */
+/* ========== COLETA DE DADOS ========== */
 function collectData() {
   return MATERIALS.map(mat => {
     const fullEl = document.getElementById(`full-${mat.id}`);
@@ -245,7 +245,7 @@ function collectData() {
   });
 }
 
-/* ---------- Formatação ---------- */
+/* ========== FORMATAÇÃO ========== */
 function plural(n, sing, plur) { return `${n} ${n === 1 ? sing : plur}`; }
 
 function formatShort(full, half, mat) {
@@ -276,17 +276,35 @@ function formatDateLong() {
   return `${dias[d.getDay()]}, ${formatDate()}`;
 }
 
-/* ---------- Geração do canvas ---------- */
+/* ========== CANVAS ========== */
+function roundRect(ctx, x, y, w, h, r, corners) {
+  let tl, tr, br, bl;
+  if (corners) { [tl, tr, br, bl] = corners; }
+  else { tl = tr = br = bl = r; }
+  ctx.beginPath();
+  ctx.moveTo(x + tl, y);
+  ctx.lineTo(x + w - tr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + tr);
+  ctx.lineTo(x + w, y + h - br);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+  ctx.lineTo(x + bl, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - bl);
+  ctx.lineTo(x, y + tl);
+  ctx.quadraticCurveTo(x, y, x + tl, y);
+  ctx.closePath();
+}
+
 function generateCanvas() {
   const data = collectData();
   const scale = 2;
   const width = 720;
-  const pad = 36;
-  const lineH = 38;
-  const headerH = 130;
-  const itemsH = data.length * lineH;
-  const footerH = 60;
-  const height = headerH + itemsH + footerH;
+  const pad = 28;
+  const headerH = 150;
+  const cardH = 104;
+  const gap = 12;
+  const itemsH = data.length * (cardH + gap) - gap;
+  const footerH = 90;
+  const height = headerH + 24 + itemsH + footerH;
 
   const canvas = document.createElement('canvas');
   canvas.width = width * scale;
@@ -294,79 +312,164 @@ function generateCanvas() {
   const ctx = canvas.getContext('2d');
   ctx.scale(scale, scale);
 
-  // Fundo
-  ctx.fillStyle = '#ffffff';
+  // Fundo geral
+  ctx.fillStyle = '#f1f5f9';
   ctx.fillRect(0, 0, width, height);
 
-  // Barra superior
-  ctx.fillStyle = '#0f172a';
+  // Header com gradiente escuro
+  const grad = ctx.createLinearGradient(0, 0, width, headerH);
+  grad.addColorStop(0, '#0f172a');
+  grad.addColorStop(1, '#1e293b');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, width, headerH);
+
+  // Faixa de acento (verde WhatsApp)
+  ctx.fillStyle = '#25d366';
   ctx.fillRect(0, 0, width, 6);
 
   // Título
-  ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 25px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText('Contagem de Estoque', pad, pad + 34);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 28px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillText('Contagem de Estoque', pad, 76);
 
   // Subtítulo
-  ctx.fillStyle = '#64748b';
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
   ctx.font = '15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-  ctx.fillText(formatDateLong(), pad, pad + 62);
+  ctx.fillText('Filme Stretch  ·  ' + formatDateLong(), pad, 104);
 
-  // Linha divisória
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(pad, pad + 84);
-  ctx.lineTo(width - pad, pad + 84);
-  ctx.stroke();
+  // Linha fina decorativa
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillRect(pad, 124, 60, 2);
 
-  // Itens
-  let y = pad + 84 + 36;
-  data.forEach((d, i) => {
-    const label = d.mat.code + (d.mat.tag ? `  (${d.mat.tag})` : '');
+  // Cards dos materiais
+  let y = headerH + 24;
+
+  data.forEach(d => {
     const hasStock = d.full > 0 || d.half > 0;
-    const qty = formatShort(d.full, d.half, d.mat);
+    const cardX = pad;
+    const cardW = width - pad * 2;
 
-    // Código
+    // Sombra
+    ctx.fillStyle = 'rgba(15,23,42,0.06)';
+    roundRect(ctx, cardX, y + 3, cardW, cardH, 16);
+    ctx.fill();
+
+    // Card
+    ctx.fillStyle = '#ffffff';
+    roundRect(ctx, cardX, y, cardW, cardH, 16);
+    ctx.fill();
+
+    // Barra de acento à esquerda
+    ctx.fillStyle = hasStock ? '#25d366' : '#cbd5e1';
+    roundRect(ctx, cardX, y, 6, cardH, 16, [16, 0, 0, 16]);
+    ctx.fill();
+
+    // Código do material
+    ctx.fillStyle = hasStock ? '#0f172a' : '#94a3b8';
+    ctx.font = 'bold 22px ui-monospace, "SF Mono", Consolas, monospace';
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 16px ui-monospace, "SF Mono", Consolas, monospace';
-    ctx.fillText(label, pad, y);
+    ctx.fillText(d.mat.code, cardX + 28, y + 44);
 
-    // Quantidade
-    ctx.textAlign = 'right';
-    ctx.fillStyle = hasStock ? '#0f172a' : '#cbd5e1';
-    ctx.font = '15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillText(qty, width - pad, y);
-
-    // Linha separadora
-    if (i < data.length - 1) {
-      ctx.strokeStyle = '#f1f5f9';
-      ctx.beginPath();
-      ctx.moveTo(pad, y + 13);
-      ctx.lineTo(width - pad, y + 13);
-      ctx.stroke();
+    // Tag
+    if (d.mat.tag) {
+      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      const tagText = d.mat.tag.toUpperCase();
+      const tw = ctx.measureText(tagText).width + 18;
+      ctx.fillStyle = hasStock ? '#dbeafe' : '#f1f5f9';
+      roundRect(ctx, cardX + 28, y + 56, tw, 22, 11);
+      ctx.fill();
+      ctx.fillStyle = hasStock ? '#1d4ed8' : '#94a3b8';
+      ctx.fillText(tagText, cardX + 28 + 9, y + 71);
     }
-    y += lineH;
+
+    // Info capacidade
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    const capInfo = d.mat.half !== null
+      ? `${d.mat.full} bobinas/inteiro  ·  ${d.mat.half}/meio`
+      : `${d.mat.full} bobinas por pallet`;
+    ctx.fillText(capInfo, cardX + 28, y + cardH - 16);
+
+    // Badges à direita
+    const rightEdge = cardX + cardW - 24;
+
+    if (hasStock) {
+      let cursor = rightEdge;
+
+      // Badge meios (laranja)
+      if (d.mat.half !== null && d.half > 0) {
+        const bw = 92, bh = cardH - 32, by = y + 16;
+        const bx = cursor - bw;
+        ctx.fillStyle = '#fff7ed';
+        roundRect(ctx, bx, by, bw, bh, 12);
+        ctx.fill();
+
+        ctx.fillStyle = '#fb923c';
+        roundRect(ctx, bx + 20, by + 8, bw - 40, 3, 2);
+        ctx.fill();
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ea580c';
+        ctx.font = 'bold 30px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillText(String(d.half), bx + bw / 2, by + 44);
+
+        ctx.fillStyle = '#9a3412';
+        ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillText('MEIOS', bx + bw / 2, by + bh - 10);
+
+        cursor = bx - 10;
+      }
+
+      // Badge inteiros (azul)
+      if (d.full > 0) {
+        const bw = 92, bh = cardH - 32, by = y + 16;
+        const bx = cursor - bw;
+        ctx.fillStyle = '#eff6ff';
+        roundRect(ctx, bx, by, bw, bh, 12);
+        ctx.fill();
+
+        ctx.fillStyle = '#60a5fa';
+        roundRect(ctx, bx + 20, by + 8, bw - 40, 3, 2);
+        ctx.fill();
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#2563eb';
+        ctx.font = 'bold 30px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillText(String(d.full), bx + bw / 2, by + 44);
+
+        ctx.fillStyle = '#1e40af';
+        ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillText('INTEIROS', bx + bw / 2, by + bh - 10);
+      }
+    } else {
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillText('SEM ESTOQUE', rightEdge, y + cardH / 2 + 5);
+    }
+
+    y += cardH + gap;
   });
 
   // Rodapé
+  y += 12;
   const withStock = data.filter(d => d.full > 0 || d.half > 0).length;
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#64748b';
-  ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-  ctx.fillText(`${withStock} de ${data.length} materiais com estoque`, pad, height - pad);
 
-  ctx.textAlign = 'right';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#475569';
+  ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillText(`${withStock} de ${data.length} materiais com estoque`, width / 2, y + 22);
+
   ctx.fillStyle = '#94a3b8';
-  ctx.fillText('Gerado automaticamente', width - pad, height - pad);
+  ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillText('Gerado automaticamente  ·  ' + formatDate(), width / 2, y + 44);
 
   return canvas;
 }
 
-/* ---------- Texto para WhatsApp ---------- */
+/* ========== TEXTO WHATSAPP ========== */
 function generateWaText() {
   const data = collectData();
   const lines = [`*Contagem de Estoque - ${formatDate()}*`, ''];
@@ -376,7 +479,7 @@ function generateWaText() {
   return lines.join('\n');
 }
 
-/* ---------- Preview ---------- */
+/* ========== PREVIEW ========== */
 function openPreview() {
   currentCanvas = generateCanvas();
   document.getElementById('previewImg').src = currentCanvas.toDataURL('image/png');
@@ -389,7 +492,7 @@ function closePreview() {
   document.body.style.overflow = '';
 }
 
-/* ---------- Ações ---------- */
+/* ========== AÇÕES ========== */
 function downloadImage() {
   if (!currentCanvas) return;
   const url = currentCanvas.toDataURL('image/png');
@@ -411,10 +514,7 @@ async function shareWhatsApp() {
       await navigator.share({ files: [file], text });
       return;
     }
-  } catch (e) {
-    // cai no fallback
-  }
-  // Fallback: abre WhatsApp com o texto
+  } catch (e) {}
   const url = 'https://wa.me/?text=' + encodeURIComponent(text);
   window.open(url, '_blank');
 }
@@ -428,7 +528,6 @@ async function copyText() {
     btn.textContent = '✓ Copiado!';
     setTimeout(() => btn.textContent = orig, 1500);
   } catch {
-    // fallback
     const ta = document.createElement('textarea');
     ta.value = text;
     document.body.appendChild(ta);
@@ -438,7 +537,7 @@ async function copyText() {
   }
 }
 
-/* ---------- Init ---------- */
+/* ========== INIT ========== */
 document.getElementById('dateLabel').textContent = formatDateLong();
 renderList();
 document.getElementById('generateBtn').addEventListener('click', openPreview);
