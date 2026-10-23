@@ -96,7 +96,6 @@
   .pa-whats { background: #25d366; color: #fff; grid-column: 1 / -1; }
   .pa-download { background: #0f172a; color: #fff; }
   .pa-close { background: #f1f5f9; color: #334155; }
-  .pa-copy { background: #f1f5f9; color: #334155; }
 </style>
 </head>
 <body>
@@ -121,7 +120,6 @@
     <div class="preview-actions">
       <button class="pa-whats" id="whatsBtn">📲 Enviar pelo WhatsApp</button>
       <button class="pa-download" id="downloadBtn">⬇ Baixar imagem</button>
-      <button class="pa-copy" id="copyBtn">📋 Copiar texto</button>
       <button class="pa-close" id="closeBtn">Fechar</button>
     </div>
   </div>
@@ -136,7 +134,7 @@ const MATERIALS = [
   { id: 'd', code: '0401025V', tag: 'Normal', full: 126, half: 63 },
   { id: 'e', code: '0400025V', tag: '',       full: 112, half: 56 },
   { id: 'f', code: '0400030V', tag: '',       full: 112, half: 56 },
-  { id: 'g', code: '0300025V', tag: '',       full: 90,  half: null },
+  { id: 'g', code: '0300025V', tag: '',       full: 192,  half: null },
   { id: 'h', code: '0350825V', tag: '',       full: 126, half: null },
 ];
 
@@ -254,15 +252,6 @@ function formatShort(full, half, mat) {
   if (mat.half !== null && half > 0) parts.push(plural(half, 'meio', 'meios'));
   if (parts.length === 0) return 'Sem estoque';
   return parts.join(' + ');
-}
-
-function formatWa(full, half, mat) {
-  const name = mat.code + (mat.tag ? ` (${mat.tag})` : '');
-  const parts = [];
-  if (full > 0) parts.push(plural(full, 'inteiro', 'inteiros'));
-  if (mat.half !== null && half > 0) parts.push(plural(half, 'meio', 'meios'));
-  if (parts.length === 0) return `Sem estoque de ${name}`;
-  return `Temos ${parts.join(' e ')} de ${name}`;
 }
 
 function formatDate() {
@@ -469,16 +458,6 @@ function generateCanvas() {
   return canvas;
 }
 
-/* ========== TEXTO WHATSAPP ========== */
-function generateWaText() {
-  const data = collectData();
-  const lines = [`*Contagem de Estoque - ${formatDate()}*`, ''];
-  data.forEach(d => {
-    lines.push('• ' + formatWa(d.full, d.half, d.mat));
-  });
-  return lines.join('\n');
-}
-
 /* ========== PREVIEW ========== */
 function openPreview() {
   currentCanvas = generateCanvas();
@@ -506,35 +485,15 @@ function downloadImage() {
 
 async function shareWhatsApp() {
   if (!currentCanvas) return;
-  const text = generateWaText();
   try {
     const blob = await new Promise(res => currentCanvas.toBlob(res, 'image/png'));
     const file = new File([blob], `contagem-${formatDate().replace(/\//g,'-')}.png`, { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], text });
+      await navigator.share({ files: [file] });
       return;
     }
   } catch (e) {}
-  const url = 'https://wa.me/?text=' + encodeURIComponent(text);
-  window.open(url, '_blank');
-}
-
-async function copyText() {
-  const text = generateWaText();
-  try {
-    await navigator.clipboard.writeText(text);
-    const btn = document.getElementById('copyBtn');
-    const orig = btn.textContent;
-    btn.textContent = '✓ Copiado!';
-    setTimeout(() => btn.textContent = orig, 1500);
-  } catch {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    ta.remove();
-  }
+  alert('Para enviar pelo WhatsApp, baixe a imagem e compartilhe manualmente.');
 }
 
 /* ========== INIT ========== */
@@ -544,7 +503,6 @@ document.getElementById('generateBtn').addEventListener('click', openPreview);
 document.getElementById('closeBtn').addEventListener('click', closePreview);
 document.getElementById('downloadBtn').addEventListener('click', downloadImage);
 document.getElementById('whatsBtn').addEventListener('click', shareWhatsApp);
-document.getElementById('copyBtn').addEventListener('click', copyText);
 document.getElementById('resetBtn').addEventListener('click', () => {
   if (!confirm('Zerar todas as contagens?')) return;
   MATERIALS.forEach(mat => {
