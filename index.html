@@ -17,6 +17,7 @@
   .card {
     background: #fff; border-radius: 12px; padding: 14px 16px;
     margin-bottom: 10px; box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+    min-height: 140px;
   }
   .card-header {
     display: flex; justify-content: space-between; align-items: baseline;
@@ -24,6 +25,7 @@
   }
   .card-right {
     display: flex; align-items: center; gap: 8px;
+    flex-wrap: wrap;
   }
   .code-wrap { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
   .code { font-weight: 700; font-size: 15px; font-family: ui-monospace, "SF Mono", Consolas, monospace; }
@@ -35,6 +37,11 @@
   .weight-display {
     font-size: 13px; font-weight: 700; color: #0f172a;
     background: #fef3c7; padding: 6px 10px; border-radius: 8px;
+    white-space: nowrap;
+  }
+  .bobs-display {
+    font-size: 11px; font-weight: 600; color: #64748b;
+    background: #f1f5f9; padding: 4px 8px; border-radius: 6px;
     white-space: nowrap;
   }
 
@@ -177,6 +184,7 @@ function renderList() {
       : `${mat.full} inteiro · ${mat.half} meio`;
 
     const totalWeight = (fullVal * mat.weight * 1) + (halfVal * mat.weight * 0.5);
+    const totalBobinas = fullVal * mat.full + halfVal * (mat.half || 0);
 
     card.innerHTML = `
       <div class="card-header">
@@ -187,6 +195,7 @@ function renderList() {
         <div class="card-right">
           <div class="info">${infoText}</div>
           <div class="weight-display">${totalWeight.toFixed(1)} kg</div>
+          <div class="bobs-display">${totalBobinas} bobinas</div>
         </div>
       </div>
       <div class="inputs">
@@ -259,12 +268,17 @@ function updateWeightDisplay(matId) {
   const halfVal = mat.half !== null ? (parseInt(halfEl?.value) || 0) : 0;
 
   const totalWeight = (fullVal * mat.weight * 1) + (halfVal * mat.weight * 0.5);
+  const totalBobinas = fullVal * mat.full + halfVal * (mat.half || 0);
 
   const cards = document.querySelectorAll('.card');
   const cardIndex = MATERIALS.findIndex(m => m.id === matId);
   const weightInfo = cards[cardIndex].querySelector('.card-right .weight-display');
+  const bobsInfo = cards[cardIndex].querySelector('.card-right .bobs-display');
   if (weightInfo) {
     weightInfo.textContent = `${totalWeight.toFixed(1)} kg`;
+  }
+  if (bobsInfo) {
+    bobsInfo.textContent = `${totalBobinas} bobinas`;
   }
 }
 
@@ -327,10 +341,10 @@ function generateCanvas() {
   const width = 720;
   const pad = 28;
   const headerH = 150;
-  const cardH = 130;
-  const gap = 12;
+  const cardH = 180;
+  const gap = 14;
   const itemsH = data.length * (cardH + gap) - gap;
-  const footerH = 110;
+  const footerH = 120;
   const height = headerH + 24 + itemsH + footerH;
 
   const canvas = document.createElement('canvas');
@@ -411,38 +425,56 @@ function generateCanvas() {
       ctx.fillText(tagText, cardX + 28 + 9, y + 71);
     }
 
-    // Info capacidade
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    const capInfo = d.mat.half !== null
-      ? `${d.mat.full} bobinas/inteiro  ·  ${d.mat.half}/meio`
-      : `${d.mat.full} bobinas por pallet`;
-    ctx.fillText(capInfo, cardX + 28, y + 54);
+    // Texto de exemplo
+    const exampleText = d.mat.half === null
+      ? `${d.mat.full} Bobinas um pallet inteiro`
+      : `${d.mat.full} Bobinas um pallet inteiro / ${d.mat.half} Bobinas um meio pallet`;
+    ctx.fillStyle = '#64748b';
+    ctx.font = 'italic 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText(exampleText, cardX + 28, y + 95);
+
+    // Peso e bobinas abaixo da descrição
+    if (hasStock) {
+      const infoY = y + 105;
+
+      // Peso card amarelo
+      const weightText = `${d.totalWeight.toFixed(1)} kg`;
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      const weightW = ctx.measureText(weightText).width + 20;
+      const weightX = cardX + 28;
+      const weightH = 28;
+
+      ctx.fillStyle = '#fef3c7';
+      roundRect(ctx, weightX, infoY, weightW, weightH, 8);
+      ctx.fill();
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#0f172a';
+      ctx.fillText(weightText, weightX + weightW / 2, infoY + 19);
+      ctx.textAlign = 'left';
+
+      // Bobinas card cinza
+      const bobsText = `${d.totalUnits} bobinas`;
+      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      const bobsW = ctx.measureText(bobsText).width + 16;
+      const bobsX = weightX + weightW + 12;
+      const bobsH = 22;
+
+      ctx.fillStyle = '#f1f5f9';
+      roundRect(ctx, bobsX, infoY + 3, bobsW, bobsH, 6);
+      ctx.fill();
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#64748b';
+      ctx.fillText(bobsText, bobsX + bobsW / 2, infoY + 18);
+      ctx.textAlign = 'left';
+    }
 
     // Badges à direita
     const rightEdge = cardX + cardW - 24;
 
     if (hasStock) {
       let cursor = rightEdge;
-
-      // Peso como card amarelo no canto superior direito
-      const weightText = `${d.totalWeight.toFixed(1)} kg`;
-      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-      const weightW = ctx.measureText(weightText).width + 20;
-      const weightX = cursor - weightW;
-      const weightY = y + 16;
-      const weightH = 28;
-
-      ctx.fillStyle = '#fef3c7';
-      roundRect(ctx, weightX, weightY, weightW, weightH, 8);
-      ctx.fill();
-
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#0f172a';
-      ctx.fillText(weightText, weightX + weightW / 2, weightY + 19);
-      ctx.textAlign = 'left';
-
-      cursor = weightX - 10;
 
       // Badge meios (laranja)
       if (d.mat.half !== null && d.half > 0) {
@@ -503,6 +535,7 @@ function generateCanvas() {
   y += 12;
   const withStock = data.filter(d => d.full > 0 || d.half > 0).length;
   const totalWeightAll = data.reduce((sum, d) => sum + d.totalWeight, 0);
+  const totalBobinasAll = data.reduce((sum, d) => sum + d.totalUnits, 0);
 
   ctx.textAlign = 'center';
   ctx.fillStyle = '#475569';
@@ -511,7 +544,7 @@ function generateCanvas() {
 
   ctx.fillStyle = '#0f172a';
   ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-  ctx.fillText(`Peso total aproximado: ${totalWeightAll.toFixed(1)} kg`, width / 2, y + 44);
+  ctx.fillText(`Peso total: ${totalWeightAll.toFixed(1)} kg  ·  Bobinas: ${totalBobinasAll}`, width / 2, y + 44);
 
   ctx.fillStyle = '#94a3b8';
   ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
@@ -561,7 +594,9 @@ async function shareWhatsApp() {
 /* ========== INIT ========== */
 document.getElementById('dateLabel').textContent = formatDateLong();
 renderList();
-MATERIALS.forEach(mat => updateWeightDisplay(mat.id));
+MATERIALS.forEach(mat => {
+  updateWeightDisplay(mat.id);
+});
 document.getElementById('generateBtn').addEventListener('click', openPreview);
 document.getElementById('closeBtn').addEventListener('click', closePreview);
 document.getElementById('downloadBtn').addEventListener('click', downloadImage);
