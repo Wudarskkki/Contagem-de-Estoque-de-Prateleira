@@ -22,6 +22,9 @@
     display: flex; justify-content: space-between; align-items: baseline;
     margin-bottom: 10px; gap: 8px;
   }
+  .card-right {
+    display: flex; align-items: center; gap: 8px;
+  }
   .code-wrap { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
   .code { font-weight: 700; font-size: 15px; font-family: ui-monospace, "SF Mono", Consolas, monospace; }
   .tag {
@@ -30,9 +33,9 @@
   }
   .info { font-size: 11px; color: #94a3b8; white-space: nowrap; }
   .weight-display {
-    font-size: 15px; font-weight: 700; color: #0f172a;
-    background: #f1f5f9; padding: 8px 12px; border-radius: 8px;
-    margin-top: 10px; display: inline-block;
+    font-size: 13px; font-weight: 700; color: #0f172a;
+    background: #fef3c7; padding: 6px 10px; border-radius: 8px;
+    white-space: nowrap;
   }
 
   .inputs { display: flex; gap: 10px; }
@@ -181,9 +184,11 @@ function renderList() {
           <span class="code">${mat.code}</span>
           ${mat.tag ? `<span class="tag">${mat.tag}</span>` : ''}
         </div>
-        <div class="info">${infoText}</div>
+        <div class="card-right">
+          <div class="info">${infoText}</div>
+          <div class="weight-display">${totalWeight.toFixed(1)} kg</div>
+        </div>
       </div>
-      <div class="weight-display">Peso: ${totalWeight.toFixed(1)} kg</div>
       <div class="inputs">
         <div class="input-group">
           <label>Inteiros</label>
@@ -257,9 +262,9 @@ function updateWeightDisplay(matId) {
 
   const cards = document.querySelectorAll('.card');
   const cardIndex = MATERIALS.findIndex(m => m.id === matId);
-  const weightInfo = cards[cardIndex].querySelector('.weight-display');
+  const weightInfo = cards[cardIndex].querySelector('.card-right .weight-display');
   if (weightInfo) {
-    weightInfo.textContent = `Peso: ${totalWeight.toFixed(1)} kg`;
+    weightInfo.textContent = `${totalWeight.toFixed(1)} kg`;
   }
 }
 
@@ -322,7 +327,7 @@ function generateCanvas() {
   const width = 720;
   const pad = 28;
   const headerH = 150;
-  const cardH = 125;
+  const cardH = 130;
   const gap = 12;
   const itemsH = data.length * (cardH + gap) - gap;
   const footerH = 110;
@@ -412,20 +417,32 @@ function generateCanvas() {
     const capInfo = d.mat.half !== null
       ? `${d.mat.full} bobinas/inteiro  ·  ${d.mat.half}/meio`
       : `${d.mat.full} bobinas por pallet`;
-    ctx.fillText(capInfo, cardX + 28, y + cardH - 16);
-
-    // Peso aproximado
-    if (hasStock) {
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-      ctx.fillText(`${d.totalWeight.toFixed(1)} kg`, cardX + 28, y + cardH - 34);
-    }
+    ctx.fillText(capInfo, cardX + 28, y + 54);
 
     // Badges à direita
     const rightEdge = cardX + cardW - 24;
 
     if (hasStock) {
       let cursor = rightEdge;
+
+      // Peso como card amarelo no canto superior direito
+      const weightText = `${d.totalWeight.toFixed(1)} kg`;
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      const weightW = ctx.measureText(weightText).width + 20;
+      const weightX = cursor - weightW;
+      const weightY = y + 16;
+      const weightH = 28;
+
+      ctx.fillStyle = '#fef3c7';
+      roundRect(ctx, weightX, weightY, weightW, weightH, 8);
+      ctx.fill();
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#0f172a';
+      ctx.fillText(weightText, weightX + weightW / 2, weightY + 19);
+      ctx.textAlign = 'left';
+
+      cursor = weightX - 10;
 
       // Badge meios (laranja)
       if (d.mat.half !== null && d.half > 0) {
