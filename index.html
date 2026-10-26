@@ -69,7 +69,7 @@
   }
   .stepper input::-webkit-outer-spin-button,
   .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  .stepper input[type=number] { -moz-appearance: textfield; }
+  .stepper input[type=number] { appearance: textfield; -moz-appearance: textfield; }
 
   .actions {
     position: fixed; bottom: 0; left: 0; right: 0;
@@ -143,14 +143,14 @@
 <script>
 /* ========== MATERIAIS ========== */
 const MATERIALS = [
-  { id: 'a', code: '0401025V', tag: 'Shpx',   full: 216, half: null, weight: 750 },
-  { id: 'b', code: '0400020V', tag: '',       full: 112, half: 56,  weight: 448 },
-  { id: 'c', code: '0450525V', tag: '',       full: 126, half: 63,  weight: 504 },
-  { id: 'd', code: '0401025V', tag: 'Normal', full: 126, half: 63,  weight: 504 },
-  { id: 'e', code: '0400025V', tag: '',       full: 112, half: 56,  weight: 448 },
-  { id: 'f', code: '0400030V', tag: '',       full: 112, half: 56,  weight: 448 },
-  { id: 'g', code: '0300025V', tag: '',       full: 192,  half: null, weight: 450 },
-  { id: 'h', code: '0350825V', tag: '',       full: 126, half: null, weight: 441 },
+  { id: 'a', code: '0401025V - FILME STRETCH VIRGEM MANUAL', tag: 'Shpx',   full: 216, half: null, weight: 750 },
+  { id: 'b', code: '0400020V - FILME STRETCH VIRGEM MANUAL', tag: '',       full: 112, half: 56,  weight: 448 },
+  { id: 'c', code: '0450525V - FILME STRETCH VIRGEM MANUAL', tag: '',       full: 126, half: 63,  weight: 504 },
+  { id: 'd', code: '0401025V - FILME STRETCH VIRGEM MANUAL', tag: 'Normal', full: 126, half: 63,  weight: 504 },
+  { id: 'e', code: '0400025V - FILME STRETCH VIRGEM MANUAL', tag: '',       full: 112, half: 56,  weight: 448 },
+  { id: 'f', code: '0400030V - FILME STRETCH VIRGEM MANUAL', tag: '',       full: 112, half: 56,  weight: 448 },
+  { id: 'g', code: '0300025V - FILME STRETCH VIRGEM PRE ESTIRADO', tag: '',       full: 192,  half: null, weight: 450 },
+  { id: 'h', code: '0350825V - FILME STRETCH VIRGEM PRE ESTIRADO', tag: '',       full: 126, half: null, weight: 441 },
 ];
 
 const STORAGE_KEY = 'estoque-contagem-v1';
@@ -455,10 +455,10 @@ function generateCanvas() {
 
       // Bobinas card cinza
       const bobsText = `${d.totalUnits} bobinas`;
-      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-      const bobsW = ctx.measureText(bobsText).width + 16;
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      const bobsW = ctx.measureText(bobsText).width + 20;
       const bobsX = weightX + weightW + 12;
-      const bobsH = 22;
+      const bobsH = 28;
 
       ctx.fillStyle = '#f1f5f9';
       roundRect(ctx, bobsX, infoY + 3, bobsW, bobsH, 6);
